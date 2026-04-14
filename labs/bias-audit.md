@@ -9,5 +9,5 @@
 
 If you finish early and you're curious, you can redo these three steps via [Google Colab](https://colab.research.google.com/drive/1Az3aLnaVVXMQsMd6qJtXArFfZNVviSh5?usp=sharing). It's fine if we collect more data! 
 
-When everyone is done, we'll explore [the visualization of our results](https://laurenfklein.github.io/cnm-teaching-learning-summit/bias-plot-final.html).
+When everyone is done, we'll explore [the visualization of our results](https://laurenfklein.github.io/wilkes/bias-plot-final.html).
 
