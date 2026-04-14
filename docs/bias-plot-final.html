@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Racial Likelihood by Name · Dom / Sub</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet"/>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:      #f5f1eb;
+  --ink:     #1a1814;
+  --muted:   #8a8278;
+  --rule:    #d8d2c8;
+  --dom-hue: #2d4a7a;
+  --sub-hue: #7a2d4a;
+  --surface: #eeeae3;
+}
+
+/* ── Lock entire UI to viewport — no scrolling ── */
+html, body {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'Space Mono', monospace;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── HEADER: compact so charts get maximum space ── */
+header {
+  padding: 12px 32px 10px;
+  border-bottom: 1px solid var(--rule);
+  flex-shrink: 0;
+}
+
+.header-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+h1 {
+  font-family: 'Crimson Pro', serif;
+  font-size: 1.35rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.subtitle {
+  font-size: 0.58rem;
+  color: var(--muted);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+
+.data-badge {
+  font-size: 0.58rem;
+  color: var(--muted);
+  letter-spacing: 0.06em;
+}
+
+/* ── LEGEND ── */
+#global-legend {
+  padding: 7px 32px;
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  align-items: center;
+  border-bottom: 1px solid var(--rule);
+  background: var(--surface);
+  flex-shrink: 0;
+}
+
+.leg-label-head {
+  font-size: 0.55rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  margin-right: 4px;
+}
+
+.leg-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.15s;
+  user-select: none;
+}
+.leg-item:hover { background: var(--rule); }
+.leg-item.off   { opacity: 0.28; }
+.leg-swatch     { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.leg-name       { font-size: 0.6rem; color: var(--ink); }
+
+.leg-toggle {
+  margin-left: auto;
+  font-size: 0.55rem;
+  color: var(--muted);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  font-family: 'Space Mono', monospace;
+  padding: 3px 0;
+}
+
+/* ── CHARTS ROW: fills remaining space exactly ── */
+#charts-row {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 0; /* critical — prevents grid from overflowing */
+}
+
+.chart-panel {
+  display: flex;
+  flex-direction: column;
+  padding: 14px 28px 14px;
+  min-height: 0;
+}
+.chart-panel:first-child { border-right: 1px solid var(--rule); }
+
+.role-tag {
+  font-size: 0.52rem;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--muted);
+  line-height: 1;
+}
+
+.panel-title {
+  font-family: 'Crimson Pro', serif;
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1;
+  margin: 2px 0;
+}
+.panel-title.dom { color: var(--dom-hue); }
+.panel-title.sub { color: var(--sub-hue); }
+
+.panel-desc {
+  font-size: 0.55rem;
+  color: var(--muted);
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+}
+
+/* svg wrapper fills all remaining panel height */
+.svg-wrap {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+.svg-wrap svg { width: 100%; height: 100%; display: block; }
+
+/* ── D3 ELEMENTS ── */
+.axis path { stroke: var(--rule); }
+.axis line { stroke: var(--rule); }
+.axis text { fill: var(--muted); font-family: 'Space Mono', monospace; font-size: 9px; }
+.axis-label {
+  fill: var(--ink);
+  font-family: 'Crimson Pro', serif;
+  font-style: italic;
+  font-size: 11px;
+}
+.grid line { stroke: rgba(0,0,0,0.045); stroke-dasharray: 3,4; }
+.grid path { stroke: none; }
+.dot { cursor: pointer; transition: r 0.1s, opacity 0.15s; stroke-width: 1px; }
+.name-callout { font-family: 'Space Mono', monospace; font-size: 8px; pointer-events: none; }
+
+/* ── TOOLTIP ── */
+#tip {
+  position: fixed;
+  pointer-events: none;
+  z-index: 200;
+  opacity: 0;
+  transition: opacity 0.1s;
+  background: #fff;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+  min-width: 200px;
+  overflow: hidden;
+}
+#tip.on { opacity: 1; }
+
+.tip-accent-bar { height: 3px; }
+
+.tip-header {
+  padding: 9px 13px 7px;
+  border-bottom: 1px solid var(--rule);
+}
+.tip-name {
+  font-family: 'Crimson Pro', serif;
+  font-size: 1.05rem;
+  font-style: italic;
+  font-weight: 600;
+  color: var(--ink);
+  display: block;
+  line-height: 1.1;
+}
+.tip-role {
+  font-size: 0.52rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  margin-top: 3px;
+}
+.tip-body { padding: 7px 13px 9px; display: flex; flex-direction: column; gap: 4px; }
+.tip-row  { display: flex; justify-content: space-between; align-items: baseline; gap: 18px; }
+.tip-k    { font-size: 0.58rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); }
+.tip-v    { font-size: 0.7rem; font-weight: 700; color: var(--ink); font-family: 'Space Mono', monospace; }
+
+/* ── LOADING OVERLAY ── */
+.overlay {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 10px;
+  color: var(--muted); font-size: 0.7rem;
+}
+.spinner {
+  width: 22px; height: 22px;
+  border: 2px solid var(--rule);
+  border-top-color: var(--ink);
+  border-radius: 50%;
+  animation: spin 0.75s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-top">
+    <div>
+      <h1>Racial/Ethnic Likelihood by Name</h1>
+      <div class="subtitle">Data Scientist &amp; Newcomer Role Assignments · LLM Bias Audit</div>
+    </div>
+    <div class="data-badge" id="data-badge">loading…</div>
+  </div>
+</header>
+
+<div id="global-legend">
+  <span class="leg-label-head">Race</span>
+</div>
+
+<div id="charts-row">
+  <div class="chart-panel">
+    <div class="role-tag">Dominant Role</div>
+    <div class="panel-title dom">Data Scientist</div>
+    <div class="panel-desc">% likelihood assigned per race/ethnicity &amp; name</div>
+    <div class="svg-wrap" id="wrap-dom">
+      <div class="overlay" id="load-dom"><div class="spinner"></div><span>Loading…</span></div>
+    </div>
+  </div>
+  <div class="chart-panel">
+    <div class="role-tag">Subordinate Role</div>
+    <div class="panel-title sub">Newcomer</div>
+    <div class="panel-desc">% likelihood assigned per race/ethnicity &amp; name</div>
+    <div class="svg-wrap" id="wrap-sub">
+      <div class="overlay" id="load-sub"><div class="spinner"></div><span>Loading…</span></div>
+    </div>
+  </div>
+</div>
+
+<div id="tip">
+  <div class="tip-accent-bar" id="tip-bar"></div>
+  <div class="tip-header">
+    <span class="tip-name" id="tip-name"></span>
+    <div class="tip-role" id="tip-role"></div>
+  </div>
+  <div class="tip-body" id="tip-body"></div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════════════════════
+// DATA SOURCE CONFIG
+// ══════════════════════════════════════════════════════════════════════════════
+//
+// ▼▼▼ SWAP TEST → PRODUCTION HERE ▼▼▼
+//
+// TEST SHEET (published — no auth required):
+// const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSllraZn4DJIsr45Nh0S4pFrgEViK6aB3yB8cRf5zqop9SX5bjazlWoPL6QUbDXaz6QAXWlTcnrtMRy/pub?output=csv&gid=0';
+//
+// PRODUCTION SHEET — replace CSV_URL with:
+const CSV_URL = 'https://docs.google.com/spreadsheets/d/1IU71Il1YARDmocU1ud8kvlU5SwEntP4TPRv2_OjdTrU/gviz/tq?tqx=out:csv&sheet=colab_story_data';
+// (sheet must be "Anyone on the internet can view")
+//
+// EXPECTED COLUMNS: Name, Race, Role, Percentage, Count (optional)
+// ══════════════════════════════════════════════════════════════════════════════
+
+// ── Race display config ────────────────────────────────────────────────────
+const RACE_ORDER = ['aian','api','black','hispanic','white','MENA','NHPI'];
+const RACE_LABEL = { aian:'AIAN', api:'API', black:'Black', hispanic:'Hispanic', white:'White', MENA:'MENA', NHPI:'NHPI' };
+const RACE_LONG_LABEL = {
+  aian: 'American Indian and Alaska Native (AIAN)', api: 'Asian/Pacific Islander (API)', black: 'Black',
+  hispanic: 'Hispanic', white: 'White', MENA: 'Middle East and North Africa (MENA)', NHPI: 'Native Hawaiian and Other Pacific Islander (NHPI)'
+};
+
+// ── Race color palette (one fixed color per race) ─────────────────────────
+// Dots for ALL names within a race share this color.
+const RACE_COLOR = {
+  aian:     '#3d7ebf',   // cerulean blue
+  api:      '#5bb37a',   // sage green
+  black:    '#7b5ea8',   // medium purple
+  hispanic: '#2aa398',   // deep teal
+  white:    '#c46db5',   // orchid
+  MENA:     '#5578cc',   // cobalt
+  NHPI:     '#5c8a3c',   // olive green
+};
+const FALLBACK_COLOR = '#7a9cbf';
+
+function raceColor(race) {
+  return RACE_COLOR[race] || FALLBACK_COLOR;
+}
+
+let allData     = [];
+let activeRaces = new Set();
+
+// ── FETCH + NORMALISE ──────────────────────────────────────────────────────
+async function fetchData() {
+  const res  = await fetch(CSV_URL + '&_=' + Date.now());
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const text = await res.text();
+  const raw  = d3.csvParse(text);
+
+  // Case-insensitive column finder
+  function col(row, ...aliases) {
+    const keys = Object.keys(row);
+    for (const alias of aliases) {
+      const found = keys.find(k => k.trim().toLowerCase() === alias.toLowerCase());
+      if (found !== undefined) return row[found];
+    }
+    return undefined;
+  }
+
+  const parsed = raw.map(r => ({
+    name:     (col(r,'name','Name')        || '').trim(),
+    race:     (col(r,'race','Race')        || '').trim(),
+    role:     (col(r,'role','Role')        || '').trim(),
+    pct:      parseFloat(col(r,'percentage','Percentage','pct','percent') || 0),
+    countRaw: col(r,'count','Count','n','N','freq','Freq'),
+  })).filter(d => d.name && d.race && d.role && !isNaN(d.pct));
+
+  // Compute count per (name, role) if no explicit Count column
+  const hasExplicitCount = parsed.some(d => d.countRaw !== undefined && d.countRaw !== '');
+  if (hasExplicitCount) {
+    parsed.forEach(d => { d.count = +d.countRaw || 0; });
+  } else {
+    const counter = new Map();
+    parsed.forEach(d => {
+      const key = `${d.name}||${d.role.toLowerCase().startsWith('dom') ? 'dom' : 'sub'}`;
+      counter.set(key, (counter.get(key) || 0) + 1);
+    });
+    parsed.forEach(d => {
+      const key = `${d.name}||${d.role.toLowerCase().startsWith('dom') ? 'dom' : 'sub'}`;
+      d.count = counter.get(key) || 0;
+    });
+  }
+
+  return parsed;
+}
+
+// ── DRAW PANEL ────────────────────────────────────────────────────────────
+const margin = { top: 10, right: 16, bottom: 46, left: 52 };
+
+function drawPanel(wrapId, roleLabel, filteredData) {
+  const wrap = document.getElementById(wrapId);
+  d3.select(wrap).select('svg').remove();
+
+  const W = wrap.clientWidth;
+  const H = wrap.clientHeight;
+  const w = W - margin.left - margin.right;
+  const h = H - margin.top  - margin.bottom;
+  if (w <= 0 || h <= 0) return;
+
+  // Only races that are active AND present in this subset
+  const racesPresent = RACE_ORDER.filter(r =>
+    activeRaces.has(r) && filteredData.some(d => d.race === r)
+  );
+  // Include inactive races for faded dots but not on axis
+  const allRacesPresent = RACE_ORDER.filter(r => filteredData.some(d => d.race === r));
+
+  const x = d3.scaleBand()
+    .domain(allRacesPresent)
+    .range([0, w])
+    .padding(0.35);
+
+  const yMax = d3.max(filteredData, d => d.pct) || 100;
+  const y = d3.scaleLinear()
+    .domain([0, yMax * 1.15])
+    .range([h, 0])
+    .nice();
+
+  // Jitter by name within band
+  const names = [...new Set(filteredData.map(d => d.name))].sort();
+  const jitter = d3.scalePoint()
+    .domain(names)
+    .range([-x.bandwidth() * 0.32, x.bandwidth() * 0.32])
+    .padding(0.3);
+
+  const svg = d3.select(wrap).append('svg').attr('width', W).attr('height', H);
+  const g   = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+
+  // Grid
+  g.append('g').attr('class','grid')
+    .call(d3.axisLeft(y).tickSize(-w).tickFormat('').ticks(5));
+
+  // Band shading
+  allRacesPresent.forEach((r, i) => {
+    if (i % 2 === 0) {
+      g.append('rect')
+        .attr('x', x(r) - x.step() * x.padding() / 2)
+        .attr('y', 0)
+        .attr('width', x.step())
+        .attr('height', h)
+        .attr('fill', 'rgba(0,0,0,0.018)')
+        .attr('pointer-events','none');
+    }
+  });
+
+  // Axes
+  g.append('g').attr('class','axis')
+    .attr('transform', `translate(0,${h})`)
+    .call(d3.axisBottom(x).tickFormat(r => RACE_LABEL[r] || r).tickSize(4));
+
+  g.append('g').attr('class','axis')
+    .call(d3.axisLeft(y).ticks(5).tickFormat(d => d + '%').tickSize(4));
+
+  g.append('text').attr('class','axis-label')
+    .attr('transform','rotate(-90)')
+    .attr('x', -h / 2).attr('y', -40)
+    .attr('text-anchor','middle')
+    .text('Likelihood (%)');
+
+  // Top name per race (for callout)
+  const topByRace = new Map();
+  allRacesPresent.forEach(race => {
+    if (!activeRaces.has(race)) return;
+    const pts = filteredData.filter(d => d.race === race);
+    if (!pts.length) return;
+    topByRace.set(race, pts.reduce((a, b) => b.pct > a.pct ? b : a));
+  });
+
+  // Tooltip elements
+  const tip     = document.getElementById('tip');
+  const tipBar  = document.getElementById('tip-bar');
+  const tipName = document.getElementById('tip-name');
+  const tipRole = document.getElementById('tip-role');
+  const tipBody = document.getElementById('tip-body');
+
+  // Dots — colored by race
+  g.selectAll('.dot')
+    .data(filteredData)
+    .join('circle')
+    .attr('class','dot')
+    .attr('cx', d => x(d.race) + x.bandwidth() / 2 + (jitter(d.name) || 0))
+    .attr('cy', d => y(d.pct))
+    .attr('r', 5.5)
+    .attr('fill',    d => raceColor(d.race))
+    .attr('stroke',  d => d3.color(raceColor(d.race)).darker(0.6))
+    .attr('opacity', d => activeRaces.has(d.race) ? 0.82 : 0.07)
+    .on('mousemove', function(event, d) {
+      const col = raceColor(d.race);
+      tipBar.style.background = col;
+      tipName.textContent     = d.name;
+      tipName.style.color     = d3.color(col).darker(0.9);
+      tipRole.textContent     = roleLabel;
+      tipBody.innerHTML = `
+        <div class="tip-row">
+          <span class="tip-k">Race</span>
+          <span class="tip-v">${RACE_LABEL[d.race] || d.race}</span>
+        </div>
+        <div class="tip-row">
+          <span class="tip-k">Count in subset</span>
+          <span class="tip-v">${d.count.toLocaleString()}</span>
+        </div>
+        <div class="tip-row">
+          <span class="tip-k">Racial likelihood</span>
+          <span class="tip-v">${d.pct.toFixed(2)}%</span>
+        </div>
+      `;
+      const vw   = window.innerWidth;
+      const tipW = 220;
+      tip.style.left = (event.clientX + 16 + tipW > vw
+        ? event.clientX - tipW - 8
+        : event.clientX + 16) + 'px';
+      tip.style.top = (event.clientY - 10) + 'px';
+      tip.classList.add('on');
+      d3.select(this).attr('r', 8.5).attr('opacity', 1);
+    })
+    .on('mouseleave', function(event, d) {
+      tip.classList.remove('on');
+      d3.select(this).attr('r', 5.5)
+        .attr('opacity', activeRaces.has(d.race) ? 0.82 : 0.07);
+    });
+
+  // Callout labels for top dot per race
+  topByRace.forEach((d, race) => {
+    const cx = x(race) + x.bandwidth() / 2 + (jitter(d.name) || 0);
+    const cy = y(d.pct);
+    const col = raceColor(race);
+    g.append('line')
+      .attr('x1', cx).attr('y1', cy - 7)
+      .attr('x2', cx).attr('y2', cy - 17)
+      .attr('stroke', col).attr('stroke-width', 1)
+      .attr('opacity', 0.5).attr('pointer-events','none');
+    g.append('text')
+      .attr('class','name-callout')
+      .attr('x', cx).attr('y', cy - 21)
+      .attr('text-anchor','middle')
+      .attr('fill', d3.color(col).darker(0.8))
+      .attr('font-weight','700')
+      .text(d.name);
+  });
+}
+
+// ── LEGEND (by Race) ──────────────────────────────────────────────────────
+function buildLegend(races) {
+  const leg = document.getElementById('global-legend');
+  leg.querySelectorAll('.leg-item, .leg-toggle').forEach(el => el.remove());
+
+  races.forEach(race => {
+    const el = document.createElement('div');
+    el.className   = 'leg-item' + (activeRaces.has(race) ? '' : ' off');
+    el.dataset.race = race;
+    el.innerHTML = `
+      <div class="leg-swatch" style="background:${raceColor(race)}"></div>
+      <div class="leg-name">${RACE_LONG_LABEL[race] || race}</div>
+    `;
+    el.addEventListener('click', () => {
+      if (activeRaces.has(race)) activeRaces.delete(race);
+      else activeRaces.add(race);
+      renderAll();
+    });
+    leg.appendChild(el);
+  });
+
+  const tog = document.createElement('div');
+  tog.className   = 'leg-toggle';
+  tog.textContent = 'toggle all';
+  tog.addEventListener('click', () => {
+    if (activeRaces.size === races.length) activeRaces.clear();
+    else races.forEach(r => activeRaces.add(r));
+    renderAll();
+  });
+  leg.appendChild(tog);
+}
+
+// ── RENDER ALL ────────────────────────────────────────────────────────────
+function renderAll() {
+  document.querySelectorAll('.leg-item').forEach(el => {
+    el.classList.toggle('off', !activeRaces.has(el.dataset.race));
+  });
+  const domData = allData.filter(d => d.role.toLowerCase().startsWith('dom'));
+  const subData = allData.filter(d => !d.role.toLowerCase().startsWith('dom'));
+  drawPanel('wrap-dom', 'Dominant · Data Scientist', domData);
+  drawPanel('wrap-sub', 'Subordinate · Newcomer',    subData);
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────
+async function init() {
+  try {
+    allData = await fetchData();
+
+    const races = RACE_ORDER.filter(r => allData.some(d => d.race === r));
+    races.forEach(r => activeRaces.add(r));
+
+    document.getElementById('load-dom').style.display = 'none';
+    document.getElementById('load-sub').style.display = 'none';
+
+    const names = [...new Set(allData.map(d => d.name))].length;
+    document.getElementById('data-badge').textContent =
+      `${allData.length} rows · ${names} names · ${races.length} races`;
+
+    buildLegend(races);
+    renderAll();
+
+  } catch(e) {
+    ['load-dom','load-sub'].forEach(id => {
+      document.getElementById(id).innerHTML = `
+        <div style="text-align:center;color:#c0392b;font-size:0.7rem;padding:20px;line-height:1.9">
+          <div style="font-size:1rem;margin-bottom:6px;font-family:'Crimson Pro',serif;font-style:italic">Could not load data</div>
+          <div>Check the sheet URL and ensure it is set to<br><strong>Anyone on the internet can view</strong></div>
+          <div style="color:#aaa;font-size:0.58rem;margin-top:8px">${e.message}</div>
+        </div>
+      `;
+    });
+    document.getElementById('data-badge').textContent = 'error';
+    console.error('Data load error:', e);
+  }
+}
+
+new ResizeObserver(() => { if (allData.length) renderAll(); })
+  .observe(document.getElementById('charts-row'));
+
+init();
+</script>
+</body>
+</html>
