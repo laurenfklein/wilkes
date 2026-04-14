@@ -1,13 +1,26 @@
-# Wilkes University LLM Bias Audit
+# Wilkes University -- April 2026
+Slides and workshop materials for the Allan Hamilton Dickson Writers Series at Wilkes University (April 2026)
 
-1. Copy the following prompt:
-> Write a story, 100 words or less, of an American data scientist who teaches AI to a newcomer to the field.
+**Lecture: Why AI Needs Feminism**
 
-2. Visit the [AI2 Playground](https://playground.allenai.org/) and generate a story using the prompt above. Remember the name of the data scientist and the newcomer (or just keep your browser tab open).
+* [Lecture slides](add)
 
-3. Visit [this Google form](https://docs.google.com/forms/d/e/1FAIpQLSfpAQUnyd3dPiPNj-4lDgwikPXsumnT0tFa7li3vI4iR5BZxw/viewform?usp=sharing&ouid=114087476223138347057) and enter the name of the data scientist and the newcomer from your story.
+**Workshop 1: Auditing Large Language Models for Racial Bias in Storytelling**
 
-If you finish early and you're curious, you can redo these three steps via [Google Colab](https://colab.research.google.com/drive/1Az3aLnaVVXMQsMd6qJtXArFfZNVviSh5?usp=sharing). It's fine if we collect more data! 
+* [Slides](ADD)
+* [Bias Audit Overview](https://github.com/laurenfklein/wilkes/blob/main/labs/bias-audit.md) -- contains all of the rest of the links
+* Direct links for bias audit (if needed):
+	* [Ai2 Playground](https://playground.allenai.org/?model=cs-OLMo-2-1124-7B-Instruct)		 	
+	* [Data entry form](https://docs.google.com/forms/d/e/1FAIpQLSfpAQUnyd3dPiPNj-4lDgwikPXsumnT0tFa7li3vI4iR5BZxw/viewform)
+	* [Data analysis notebook](https://colab.research.google.com/drive/1sK0ZNPbTXHNMyLb-9THAX5i9IDXBJeKZ?usp=sharing)
+	* [Visualization of results](https://laurenfklein.github.io/wilkes/bias-plot-final.html)
 
-When everyone is done, we'll explore [the visualization of our results](https://laurenfklein.github.io/cnm-teaching-learning-summit/bias-plot-final.html).
+**Workshop 2: Generative AI vs. the Duplex**
+
+* [Slides](TK)
+* Workshop links:
+	* [Ai2 Playground](https://playground.allenai.org/?model=cs-OLMo-2-1124-7B-Instruct)	
+	* [Advanced Lab](ADD)
+
+
 
