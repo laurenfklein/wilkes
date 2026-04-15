@@ -1,5 +1,5 @@
 # Wilkes University -- April 2026
-Slides and workshop materials for the Allan Hamilton Dickson Writers Series at Wilkes University (April 2026)
+Slides and workshop materials for the Allan Hamilton Dickson Spring Writers Series at Wilkes University (April 2026)
 
 **Lecture: Why AI Needs Feminism**
 
@@ -17,7 +17,7 @@ Slides and workshop materials for the Allan Hamilton Dickson Writers Series at W
 
 **Workshop 2: Generative AI vs. the Duplex**
 
-* [Slides](TK)
+* [Slides](https://github.com/laurenfklein/wilkes/blob/main/slides/GenAI%20vs.%20the%20Duplex%20--%20Wilkes%20--%20Spring%202026.pdf)
 * [GenAI Lab Overview](https://github.com/laurenfklein/wilkes/blob/main/labs/ai-duplex.md)
 * Direct links if needed:
 	* [Ai2 Playground](https://playground.allenai.org/?model=cs-OLMo-2-1124-7B-Instruct)	
