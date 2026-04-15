@@ -3,7 +3,7 @@ Slides and workshop materials for the Allan Hamilton Dickson Writers Series at W
 
 **Lecture: Why AI Needs Feminism**
 
-* [Lecture slides](add)
+* [Lecture slides](https://github.com/laurenfklein/wilkes/blob/main/slides/Why%20AI%20Needs%20Feminism%20-%2030%20min%20-%20Spring%202026.pdf)
 
 **Workshop 1: Auditing Large Language Models for Racial Bias in Storytelling**
 
@@ -18,9 +18,10 @@ Slides and workshop materials for the Allan Hamilton Dickson Writers Series at W
 **Workshop 2: Generative AI vs. the Duplex**
 
 * [Slides](TK)
-* Workshop links:
+* [GenAI Lab Overview](https://github.com/laurenfklein/wilkes/blob/main/labs/ai-duplex.md)
+* Direct links if needed:
 	* [Ai2 Playground](https://playground.allenai.org/?model=cs-OLMo-2-1124-7B-Instruct)	
-	* [Advanced Lab](ADD)
+	* [Spreadsheet for results](https://docs.google.com/spreadsheets/d/18oSss5e13PkmcC5tYMcDg1djORv8kUjPz4dOj8glh60/edit?gid=0#gid=0)
 
 
 
